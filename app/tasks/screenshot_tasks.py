@@ -93,23 +93,31 @@ async def fetch_url_async(url: str) -> dict:
             headless=True,
             executablePath=executable,
             args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-cache",
-                "--disk-cache-size=0",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
                 "--allow-running-insecure-content",
+                "--blink-settings=imagesEnabled=false",
+                "--disable-cache",
+                "--disable-dev-shm-usage",
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-gpu",
+                "--disable-setuid-sandbox",
+                "--disable-web-security",
+                "--disk-cache-size=0",
                 "--ignore-certificate-errors",
-                "--proxy-server=direct://",
+                "--no-sandbox",
+                "--no-zygote",
                 "--proxy-bypass-list=*",
+                "--proxy-server=direct://",
+                "--renderer-process-limit=1",
+                "--single-process",
             ],
         )
 
         page = await browser.newPage()
-        await page.setViewport({"width": 1920, "height": 1080})
+        await page.setExtraHTTPHeaders(
+            {"Cache-Control": "no-cache", "Pragma": "no-cache"}
+        )
+        await page.setCacheEnabled(False)
+        await page.setViewport({"width": 800, "height": 600})
 
         logger.info(f"[pyppeteer] Navigating to {url}")
         response = await page.goto(url, waitUntil="networkidle2", timeout=30000)
