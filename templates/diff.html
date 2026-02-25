@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Diff View - WatchTowerPy{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lightbox = GLightbox({
+        selector: '.glightbox',
+        touchNavigation: true,
+        loop: true,
+        autoplayVideos: true,
+        zoomable: true,
+        draggable: true
+    });
+
+    document.querySelectorAll('pre code').forEach((el) => {
+        hljs.highlightElement(el);
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex gap-3">
+    <a href="{{ url_for('main.view_link', link_id=link.id) if not is_initial else url_for('main.index') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+    </a>
+    {% if not is_initial %}
+    <a href="{{ url_for('main.check_link', link_id=link.id) }}" class="btn btn-primary">
+        <i class="fa-solid fa-rotate mr-1"></i> Check Now
+    </a>
+    {% endif %}
+</div>
+
+<!-- Change Detection Header -->
+<div class="card p-6 mb-6">
+    <h5 class="text-xl font-bold mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-file-lines text-accent"></i> {% if is_initial %}Initial Page{% else %}Change Detection{% endif %} for {{ link.title or link.url }}
+    </h5>
+    <p class="text-secondary">
+        <strong class="text-primary">Captured at:</strong> <span title="{{ entry.checked_at|localtime if entry.checked_at else entry.created_at|localtime }}">{{ entry.checked_at|relativetime if entry.checked_at else entry.created_at|relativetime }}</span>
+        {% if previous %}
+            | <strong class="text-primary">Compared to:</strong> <span title="{{ previous.checked_at|localtime }}">{{ previous.checked_at|relativetime }}</span>
+        {% elif initial and not is_initial %}
+            | <strong class="text-primary">Compared to Initial:</strong> <span title="{{ initial.created_at|localtime }}">{{ initial.created_at|relativetime }}</span>
+        {% elif is_initial %}
+            | <strong class="text-primary">Initial baseline - no comparison</strong>
+        {% endif %}
+    </p>
+
+    {% if entry.summary %}
+    <div class="mt-4 p-4 rounded-lg badge-primary">
+        <h6 class="font-bold flex items-center gap-2"><i class="fa-regular fa-lightbulb"></i> Summary</h6>
+        <p class="mt-2 m-0">{{ entry.summary|markdown|safe }}</p>
+    </div>
+    {% endif %}
+</div>
+
+
+<!-- Price Changes -->
+{% if price_data and not is_initial and (price_data.previous or price_data.current) %}
+<div class="card mb-6">
+    <div class="p-4 border-default">
+        <h5 class="font-bold flex items-center gap-2">
+            <i class="fa-solid fa-tag text-accent"></i> Price Changes
+        </h5>
+    </div>
+    <div class="p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="border-2 border-[#ef4444] rounded-lg p-4{% if not price_data.previous %} opacity-50{% endif %}">
+                <div class="text-sm text-[#ef4444] font-bold mb-2">Previous Price</div>
+                {% if price_data.previous %}
+                    <div class="text-2xl font-bold">{{ price_data.previous.text }}</div>
+                {% else %}
+                    <div class="text-secondary">No price detected</div>
+                {% endif %}
+            </div>
+            <div class="border-2 border-[#22c55e] rounded-lg p-4{% if not price_data.current %} opacity-50{% endif %}">
+                <div class="text-sm text-[#22c55e] font-bold mb-2">Current Price</div>
+                {% if price_data.current %}
+                    <div class="text-2xl font-bold">{{ price_data.current.text }}</div>
+                {% else %}
+                    <div class="text-secondary">No price detected</div>
+                {% endif %}
+            </div>
+        </div>
+        {% if price_data.previous and price_data.current and price_data.previous.amount and price_data.current.amount %}
+        {% set price_diff = (price_data.current.amount|float - price_data.previous.amount|float) %}
+        <div class="mt-4 p-3 rounded-lg {% if price_diff > 0 %}bg-red-100 text-red-700{% elif price_diff < 0 %}bg-green-100 text-green-700{% else %}bg-gray-100{% endif %}">
+            <strong>
+            {% if price_diff > 0 %}
+                <i class="fa-solid fa-arrow-up"></i> Price increased by {{ price_data.previous.currency|default('$') }}{{ "%.2f"|format(price_diff) }}
+            {% elif price_diff < 0 %}
+                <i class="fa-solid fa-arrow-down"></i> Price decreased by {{ price_data.previous.currency|default('$') }}{{ "%.2f"|format(price_diff|abs) }}
+            {% else %}
+                <i class="fa-solid fa-equals"></i> Price unchanged
+            {% endif %}
+            </strong>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Changes Detected -->
+{% if not is_initial %}
+<div class="card mb-6">
+    <div class="p-4 border-default">
+        <div class="flex justify-between items-center mb-3">
+            <h5 class="font-bold flex items-center gap-2">
+                <i class="fa-solid fa-eye text-accent"></i> Changes Detected
+            </h5>
+            <div class="flex gap-2">
+                <span class="badge badge-success">Added</span>
+                <span class="badge badge-error">Removed</span>
+            </div>
+        </div>
+{% if paragraph_diff %}
+        {% set change_pct = entry.change_percent or 0 %}
+        <div class="mb-2">
+            <div class="flex justify-between text-sm text-secondary mb-1">
+                <span>Change: {{ "%.1f"|format(change_pct) }}%</span>
+            </div>
+            <div class="w-full h-2 bg-tertiary rounded-full overflow-hidden">
+                <div class="h-full {% if change_pct > 50 %}bg-error{% elif change_pct > 20 %}bg-warning{% else %}bg-success{% endif %}"
+                     style="width: {{ 100 if change_pct > 100 else change_pct }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="p-4">
+        {% if paragraph_diff %}
+            <iframe
+                srcdoc="{{ paragraph_diff|safe }}"
+                class="w-full border-default"
+                style="height: 500px; min-height: 300px;"
+                sandbox="allow-same-origin">
+            </iframe>
+        {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-check-circle empty-state-icon"></i>
+                <p>No content changes detected.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Diff Visual - Code -->
+<div class="card mb-6">
+    <div class="p-4 border-default flex justify-between items-center">
+        <h5 class="font-bold flex items-center gap-2">
+            <i class="fa-solid fa-code text-accent"></i> Changes HTML
+        </h5>
+        <div class="flex gap-2">
+            <span class="badge badge-success">+ Added</span>
+            <span class="badge badge-error">- Removed</span>
+        </div>
+    </div>
+    <div class="p-0">
+        {% if code_diff %}
+            <div class="overflow-auto" style="height: 500px; min-height: 300px;">
+                {{ code_diff|safe }}
+            </div>
+        {% else %}
+            <div class="p-4 empty-state">
+                <i class="fa-solid fa-check-circle empty-state-icon"></i>
+                <p>No code changes detected.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal for image zoom -->
+<div id="imageModal" class="fixed bottom-4 right-4 w-[500px] max-w-[90vw] bg-white rounded-lg shadow-2xl z-50 hidden" onclick="event.stopPropagation()">
+    <div class="bg-gray-800 text-white px-4 py-2 flex justify-between items-center">
+        <span class="text-sm">Preview</span>
+        <button class="text-white hover:text-gray-300 text-xl leading-none" id="closeModalBtn">&times;</button>
+    </div>
+    <div class="relative overflow-auto max-h-[70vh]">
+        <img id="modalImage" class="w-full h-auto" src="" alt="Zoomed image">
+    </div>
+    <div class="bg-gray-100 px-4 py-2 flex justify-center gap-4">
+        <button class="text-2xl px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="zoomOut()">−</button>
+        <span class="flex items-center text-sm" id="zoomLevel">100%</span>
+        <button class="text-2xl px-3 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="zoomIn()">+</button>
+    </div>
+</div>
+
+<script>
+let zoomLevel = 1;
+function openModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').classList.remove('hidden');
+    zoomLevel = 1;
+    updateZoom();
+}
+function closeModal() {
+    document.getElementById('imageModal').classList.add('hidden');
+}
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+function zoomIn() {
+    zoomLevel = Math.min(zoomLevel + 0.25, 3);
+    updateZoom();
+}
+function zoomOut() {
+    zoomLevel = Math.max(zoomLevel - 0.25, 0.5);
+    updateZoom();
+}
+function updateZoom() {
+    document.getElementById('modalImage').style.transform = 'scale(' + zoomLevel + ')';
+    document.getElementById('zoomLevel').textContent = Math.round(zoomLevel * 100) + '%';
+}
+</script>
+
+{% if is_initial %}
+<!-- Initial Content -->
+<div class="card mb-6">
+    <div class="p-4 border-default">
+        <h5 class="font-bold flex items-center gap-2">
+            <i class="fa-solid fa-star text-accent"></i> Initial Content
+        </h5>
+    </div>
+    <div class="p-4">
+        <p class="text-secondary mb-4">This is the initial scraping - no comparison available.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}{{ link.title or link.url }} - WatchTowerPy{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex gap-3">
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+    </a>
+</div>
+
+<!-- Quick Actions & Stats Card -->
+<div class="card p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="md:col-span-2">
+            <h5 class="text-xl font-bold flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-link text-accent"></i> {{ link.title or link.url }}
+            </h5>
+            <div class="space-y-2">
+                <p><strong>URL:</strong> <a href="{{ link.url }}" target="_blank" class="text-accent">{{ link.url }}</a></p>
+                <p><strong>Project:</strong> <span class="badge badge-secondary">{{ link.project_name }}</span></p>
+                <p>
+                    <strong>Tags:</strong>
+                    {% if link.tags %}
+                        {% for tag in link.tags.split(',') %}
+                            <span class="tag tag-primary">{{ tag.strip() }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-secondary">No tags</span>
+                    {% endif %}
+                </p>
+                <p><strong>Last Checked:</strong> {% if link.last_checked %}<span title="{{ link.last_checked|localtime }}">{{ link.last_checked|relativetime }}</span>{% else %}Never{% endif %}</p>
+            </div>
+            {% if link.last_error %}
+            <div class="mt-4 p-4 rounded-lg text-white bg-error">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ link.last_error }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="border-l border-default pl-6">
+            <div class="space-y-3">
+                <a href="{{ url_for('api.check', link_id=link.id) }}" id="checkNowBtn" class="btn btn-primary w-full">
+                    <i class="fa-solid fa-rotate mr-1"></i> Check Now
+                </a>
+                {% if initial %}
+                <a href="{{ url_for('main.view_initial', link_id=link.id) }}" class="btn btn-secondary w-full">
+                    <i class="fa-solid fa-star mr-1"></i> View Initial
+                </a>
+                {% endif %}
+                {% if history %}
+                <a href="{{ url_for('main.view_diff', diff_id=history[0].id) }}" class="btn btn-secondary w-full">
+                    <i class="fa-solid fa-file-lines mr-1"></i> View Latest Diff
+                </a>
+                {% endif %}
+                <a href="{{ url_for('main.delete_link', link_id=link.id) }}" class="btn btn-danger w-full" onclick="return confirm('Are you sure?')">
+                    <i class="fa-solid fa-trash mr-1"></i> Delete Link
+                </a>
+            </div>
+            <div class="mt-4 pt-4 border-t border-default">
+                <p class="mb-1"><strong>Total Diffs:</strong> {{ history|length }}</p>
+                <p><strong>Created:</strong> {{ link.created_at|localtime if link.created_at else 'Unknown' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Initial Version -->
+        {% if initial %}
+        <div class="card overflow-hidden">
+            <div class="p-4 border-default font-bold flex items-center gap-2">
+                <i class="fa-solid fa-star text-accent"></i> Initial Version
+            </div>
+            <div class="p-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <strong title="{{ initial.created_at|localtime }}">{{ initial.created_at|relativetime }}</strong>
+                    </div>
+                    <a href="{{ url_for('main.view_initial', link_id=link.id) }}" class="btn btn-sm btn-secondary">
+                        <i class="fa-solid fa-file-lines mr-1"></i> View
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <!-- History -->
+        <div class="card overflow-hidden">
+            <div class="p-4 border-default font-bold flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-accent"></i> Version History (Last {{ history|length }} diffs)
+            </div>
+            {% if history %}
+            <div class="divide-y border-default">
+                {% for h in history %}
+                <div class="p-4 hover:bg-tertiary">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <strong title="{{ h.checked_at|localtime }}">{{ h.checked_at|relativetime }}</strong>
+                            {% if h.summary %}
+                                <div class="text-sm text-secondary mt-1">{{ h.summary }}</div>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('main.view_diff', diff_id=h.id) }}" class="btn btn-sm btn-secondary">
+                            <i class="fa-solid fa-file-lines mr-1"></i> View Diff
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-clock-rotate-left empty-state-icon"></i>
+                <p>No diffs yet. Check the URL to create the first diff.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lightbox = GLightbox({
+        selector: '.glightbox',
+        touchNavigation: true,
+        loop: true,
+        zoomable: true,
+        draggable: true
+    });
+
+    // Handle async check with polling
+    const checkBtn = document.getElementById('checkNowBtn');
+    if (checkBtn) {
+        checkBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const linkId = {{ link.id }};
+            const url = this.getAttribute('href');
+
+            // Show notification
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Checking...';
+            this.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.task_id) {
+                    // Poll for task completion
+                    await pollTaskStatus(data.task_id, linkId);
+                } else if (data.success) {
+                    showNotification('Check completed successfully!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showNotification('Check failed: ' + (data.error || 'Unknown error'), 'error');
+                    this.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> Check Now';
+                    this.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } catch (err) {
+                showNotification('Error: ' + err.message, 'error');
+                this.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> Check Now';
+                this.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    }
+
+    async function pollTaskStatus(taskId, linkId) {
+        const checkBtn = document.getElementById('checkNowBtn');
+        const maxAttempts = 60;
+        let attempts = 0;
+
+        showNotification('Scraping in progress. Please wait...', 'info');
+
+        while (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 2000));
+            attempts++;
+
+            try {
+                const response = await fetch(`/api/check/status/${taskId}`);
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    showNotification('Scraping completed!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                    return;
+                } else if (data.status === 'failed') {
+                    showNotification('Scraping failed: ' + (data.error || 'Unknown error'), 'error');
+                    if (checkBtn) {
+                        checkBtn.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> Check Now';
+                        checkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.error('Poll error:', err);
+            }
+        }
+
+        showNotification('Scraping timed out. Please check the page manually.', 'warning');
+        if (checkBtn) {
+            checkBtn.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i> Check Now';
+            checkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function showNotification(message, type) {
+        // Remove existing notifications
+        document.querySelectorAll('.toast-notification').forEach(el => el.remove());
+
+        const colors = {
+            success: 'bg-success',
+            error: 'bg-error',
+            info: 'bg-accent',
+            warning: 'bg-warning'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification fixed top-4 right-4 bg-amber-500 text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

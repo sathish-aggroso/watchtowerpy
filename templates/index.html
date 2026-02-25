@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - WatchTowerPy{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-3 space-y-6">
+        <!-- Add New Link Card -->
+        <div class="card p-6">
+            <h5 class="text-lg font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-accent"></i> Add New Link
+            </h5>
+            <form method="POST" action="{{ url_for('main.add_link') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <input type="url" name="url" placeholder="https://example.com" required class="form-control">
+                <input type="text" name="title" placeholder="Title (optional)" class="form-control">
+                <select name="project_id" class="form-select">
+                    {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="tags" placeholder="Tags (comma separated)" class="form-control">
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+        </div>
+
+        <!-- Monitored Links Table -->
+        <div class="card overflow-hidden">
+            <div class="p-4 border-default flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-link text-accent"></i> Monitored Links
+            </div>
+            {% if links %}
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Title</th>
+                            <th>Project</th>
+                            <th>Tags</th>
+                            <th>Last Checked</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in links %}
+                        <tr>
+                            <td>
+                                {% if link.last_error %}
+                                    <span class="status-error" title="{{ link.last_error }}"><i class="fa-solid fa-circle-xmark"></i></span>
+                                {% elif link.last_checked %}
+                                    <span class="status-success"><i class="fa-solid fa-circle-check"></i></span>
+                                {% else %}
+                                    <span class="status-muted"><i class="fa-regular fa-circle"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.view_link', link_id=link.id) }}" class="font-bold hover:underline">{{ link.title or link.url }}</a>
+                                <div class="text-secondary text-sm">{{ link.url[:50] }}{% if link.url|length > 50 %}...{% endif %}</div>
+                            </td>
+                            <td><span class="badge badge-secondary">{{ link.project_name }}</span></td>
+                            <td>
+                                {% if link.tags %}
+                                    {% for tag in link.tags.split(',') %}
+                                        <span class="tag tag-primary">{{ tag.strip() }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary">
+                                {% if link.last_checked %}<span title="{{ link.last_checked|localtime }}">{{ link.last_checked|relativetime }}</span>{% else %}Never{% endif %}
+                            </td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <a href="{{ url_for('main.check_link', link_id=link.id) }}" class="btn btn-sm btn-secondary" title="Check Now">
+                                        <i class="fa-solid fa-rotate"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.view_link', link_id=link.id) }}" class="btn btn-sm btn-secondary" title="View">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.delete_link', link_id=link.id) }}" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fa-regular fa-folder-open empty-state-icon"></i>
+                <p class="text-lg">No links monitored yet. Add your first URL above!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="lg:col-span-1 space-y-4">
+        <!-- Projects Card -->
+        <div class="card p-6">
+            <h6 class="font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-folder text-accent"></i> Projects
+            </h6>
+            <div class="space-y-2">
+                <a href="{{ url_for('main.index') }}" class="block px-4 py-2 rounded-lg {% if not selected_project %}badge-primary{% else %}hover:bg-tertiary transition-colors{% endif %}">
+                    All Links
+                </a>
+                {% for project in projects %}
+                    <a href="{{ url_for('main.index', project=project.id) }}" class="block px-4 py-2 rounded-lg {% if selected_project == project.id %}badge-primary{% else %}hover:bg-tertiary transition-colors{% endif %}">
+                        {{ project.name }}
+                    </a>
+                {% endfor %}
+            </div>
+            <form method="POST" action="{{ url_for('main.add_project') }}" class="mt-4 flex gap-2">
+                <input type="text" class="form-control" name="name" placeholder="New project" required>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus"></i></button>
+            </form>
+        </div>
+
+        <!-- Quick Stats Card -->
+        <div class="card p-6">
+            <h6 class="font-bold mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-accent"></i> Quick Stats
+            </h6>
+            <p class="mb-1"><strong>Total Links:</strong> {{ links|length }}</p>
+            <p><strong>Projects:</strong> {{ projects|length }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PyWatch - Website Change Detection{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <!-- Logo -->
+            <a href="{{ url_for('main.index') }}" class="navbar-brand">
+                <i class="fa-solid fa-tower-observation text-accent"></i>
+                WatchTowerPy
+            </a>
+            
+            <!-- Desktop Menu -->
+            <div class="desktop-menu">
+                <ul class="navbar-nav">
+                    <li><a href="{{ url_for('main.index') }}"><i class="fa-solid fa-house mr-1"></i> Dashboard</a></li>
+                    <li><a href="{{ url_for('main.status') }}"><i class="fa-solid fa-heart-pulse mr-1"></i> Status</a></li>
+                </ul>
+                
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="btn btn-icon text-white">
+                    <i class="fa-solid fa-sun" id="theme-icon-light"></i>
+                    <i class="fa-solid fa-moon hidden" id="theme-icon-dark"></i>
+                </button>
+                
+                <!-- Status -->
+                <span>
+                    {% if health and health.backend == 'healthy' %}
+                        <span class="text-success"><i class="fa-solid fa-check-circle"></i> System OK</span>
+                    {% else %}
+                        <span class="text-warning"><i class="fa-solid fa-triangle-exclamation"></i> Degraded</span>
+                    {% endif %}
+                </span>
+            </div>
+            
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="mobile-menu-btn btn btn-icon text-white">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="container mt-2">
+            <a href="{{ url_for('main.index') }}" class="block py-2 text-white"><i class="fa-solid fa-house mr-1"></i> Dashboard</a>
+            <a href="{{ url_for('main.status') }}" class="block py-2 text-white"><i class="fa-solid fa-heart-pulse mr-1"></i> Status</a>
+            <button id="mobile-theme-toggle" class="block py-2 text-white w-full text-left">
+                <i class="fa-solid fa-sun mr-1" id="mobile-theme-icon-light"></i>
+                <i class="fa-solid fa-moon hidden mr-1" id="mobile-theme-icon-dark"></i>
+                Toggle Theme
+            </button>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="fixed top-20 right-5 z-50">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else 'success' }} animate-fade-in">
+                        {{ message }}
+                        <button type="button" class="btn-close" onclick="this.parentElement.remove()">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <small>&copy; 2026 PyWatch - Website Change Detection</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+        const themeIconLight = document.getElementById('theme-icon-light');
+        const themeIconDark = document.getElementById('theme-icon-dark');
+        const mobileThemeIconLight = document.getElementById('mobile-theme-icon-light');
+        const mobileThemeIconDark = document.getElementById('mobile-theme-icon-dark');
+        const html = document.documentElement;
+
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                themeIconLight.classList.add('hidden');
+                themeIconDark.classList.remove('hidden');
+                mobileThemeIconLight.classList.add('hidden');
+                mobileThemeIconDark.classList.remove('hidden');
+            } else {
+                themeIconLight.classList.remove('hidden');
+                themeIconDark.classList.add('hidden');
+                mobileThemeIconLight.classList.remove('hidden');
+                mobileThemeIconDark.classList.add('hidden');
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+
+        function toggleTheme() {
+            const currentTheme = html.getAttribute('data-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        }
+
+        if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+        if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
+
+        // Mobile menu
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('show');
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

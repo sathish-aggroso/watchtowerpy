@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}System Status - WatchTowerPy{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold mb-6 flex items-center gap-3">
+    <i class="fa-solid fa-heart-pulse text-accent"></i> System Status
+</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Backend -->
+    <div class="card p-6 text-center">
+        <div class="mb-4">
+            {% if health.backend == 'healthy' %}
+                <i class="fa-solid fa-server text-5xl text-success"></i>
+            {% else %}
+                <i class="fa-solid fa-server text-5xl text-warning"></i>
+            {% endif %}
+        </div>
+        <h5 class="text-lg font-bold mb-2">Backend</h5>
+        {% if health.backend == 'healthy' %}
+            <span class="badge badge-success">Healthy</span>
+        {% else %}
+            <span class="badge" style="background-color: var(--color-warning); color: white;">{{ health.backend }}</span>
+        {% endif %}
+    </div>
+    
+    <!-- Database -->
+    <div class="card p-6 text-center">
+        <div class="mb-4">
+            {% if health.database == 'healthy' %}
+                <i class="fa-solid fa-database text-5xl text-success"></i>
+            {% else %}
+                <i class="fa-solid fa-database text-5xl text-error"></i>
+            {% endif %}
+        </div>
+        <h5 class="text-lg font-bold mb-2">Database</h5>
+        {% if health.database == 'healthy' %}
+            <span class="badge badge-success">Healthy</span>
+        {% else %}
+            <span class="badge badge-error">{{ health.database }}</span>
+        {% endif %}
+    </div>
+    
+    <!-- LLM -->
+    <div class="card p-6 text-center">
+        <div class="mb-4">
+            {% if health.llm == 'connected' %}
+                <i class="fa-solid fa-microchip text-5xl text-success"></i>
+            {% elif health.llm == 'disconnected' %}
+                <i class="fa-solid fa-microchip text-5xl text-secondary"></i>
+            {% else %}
+                <i class="fa-solid fa-microchip text-5xl text-error"></i>
+            {% endif %}
+        </div>
+        <h5 class="text-lg font-bold mb-2">LLM Connection</h5>
+        {% if health.llm == 'connected' %}
+            <span class="badge badge-success">Connected</span>
+        {% elif health.llm == 'disconnected' %}
+            <span class="badge badge-secondary">Not Configured</span>
+        {% else %}
+            <span class="badge badge-error">{{ health.llm }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- System Info -->
+<div class="card p-6 mb-6">
+    <h5 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-accent"></i> System Information
+    </h5>
+    <div class="space-y-3">
+        <div class="flex justify-between py-2 border-default">
+            <span class="font-bold">Application</span>
+            <span>WatchTowerPy</span>
+        </div>
+        <div class="flex justify-between py-2 border-default">
+            <span class="font-bold">Version</span>
+            <span>1.0.0</span>
+        </div>
+        <div class="flex justify-between py-2 border-default">
+            <span class="font-bold">Database</span>
+            <span>SQLite</span>
+        </div>
+        <div class="flex justify-between py-2 border-default">
+            <span class="font-bold">LLM API</span>
+            <span>
+                {% if health.llm == 'connected' %}
+                    <span class="text-success"><i class="fa-solid fa-check-circle"></i> Configured</span>
+                {% else %}
+                    <span class="text-secondary"><i class="fa-solid fa-xmark-circle"></i> Not configured</span>
+                    <div class="text-sm text-secondary">Set LLM_API_KEY environment variable</div>
+                {% endif %}
+            </span>
+        </div>
+        <div class="flex justify-between py-2">
+            <span class="font-bold">History</span>
+            <span>Last 5 checks per link</span>
+        </div>
+    </div>
+</div>
+
+<!-- Help -->
+<div class="card p-6">
+    <h5 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-circle-question text-accent"></i> Help
+    </h5>
+    <div class="space-y-4 text-secondary">
+        <h6 class="font-bold text-primary">How to use WatchTowerPy:</h6>
+        <ol class="list-decimal list-inside space-y-1">
+            <li>Add a URL to monitor using the form on the dashboard</li>
+            <li>Click "Check Now" to fetch the current content</li>
+            <li>Click again later to see what changed</li>
+            <li>View the diff to see exactly what changed</li>
+            <li>If LLM is configured, you'll get AI-generated summaries</li>
+        </ol>
+        <h6 class="font-bold text-primary mt-4">Environment Variables:</h6>
+        <ul class="list-disc list-inside space-y-1">
+            <li><code class="badge badge-secondary">LLM_API_KEY</code> - OpenAI API key</li>
+            <li><code class="badge badge-secondary">LLM_API_URL</code> - Custom endpoint</li>
+            <li><code class="badge badge-secondary">SECRET_KEY</code> - Flask secret</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
