@@ -11,14 +11,17 @@ for key in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]:
 
 async def take_screenshot_async(url: str, output_path: str) -> str:
     from pyppeteer import launch
-    import asyncio
+    import os
 
     try:
         logger.info(f"[screenshot] Starting screenshot for {url}")
         logger.info(f"[screenshot] Output path: {output_path}")
 
+        executable = os.environ.get("PYPPETEER_EXECUTABLE_PATH")
+
         browser = await launch(
             headless=True,
+            executablePath=executable,
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -78,13 +81,17 @@ def take_screenshot_sync(url: str, output_path: str) -> str:
 
 async def fetch_url_async(url: str) -> dict:
     import asyncio
+    import os
     from pyppeteer import launch
 
     try:
         logger.info(f"[pyppeteer] Fetching URL: {url}")
 
+        executable = os.environ.get("PYPPETEER_EXECUTABLE_PATH")
+
         browser = await launch(
             headless=True,
+            executablePath=executable,
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",

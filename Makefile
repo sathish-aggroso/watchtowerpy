@@ -22,7 +22,7 @@ init:
 
 start:
 	@echo "Starting Flask application..."
-	@.venv/bin/gunicorn --bind 0.0.0.0:$$(grep PORT .env 2>/dev/null | cut -d= -f2 || echo "5000") --log-level debug --access-logfile - --error-logfile - --enable-stdio-inheritance wsgi:app
+	@.venv/bin/gunicorn --bind 0.0.0.0:$${PORT:-5000} --log-level debug --access-logfile - --error-logfile - --enable-stdio-inheritance wsgi:app
 
 celery:
 	@echo "Starting Celery worker..."

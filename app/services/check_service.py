@@ -583,8 +583,13 @@ class CheckService:
 
             logger.info(f"[screenshot] Starting screenshot for {url}")
             logger.debug(f"[screenshot] Output path: {output_path}")
+            import os
+
+            executable = os.environ.get("PYPPETEER_EXECUTABLE_PATH")
+
             browser = await launch(
                 headless=True,
+                executablePath=executable,
                 args=[
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
@@ -639,117 +644,49 @@ class CheckService:
         import traceback
 
         try:
-            logger.info(f"[pyppeteer] Fetching URL: {url}")
+            logger.info(f"[playwright] Fetching URL: {url}")
 
-            script_content = f'''
-import asyncio
-import sys
-from pyppeteer import launch
+            import asyncio
+            import os
+            from playwright.async_api import async_playwright
 
-async def main():
-    try:
-        print(f"[pyppeteer-debug] Launching browser for {{__import__('os').environ.get('PYPPETEER_URL', '{url}')}}", file=sys.stderr)
-        browser = await launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-cache",
-                "--disk-cache-size=0",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--allow-running-insecure-content",
-            ],
-        )
-        print(f"[pyppeteer-debug] Browser launched", file=sys.stderr)
-        page = await browser.newPage()
-        await page.setViewport({{"width": 1920, "height": 1080}})
-        
-        print(f"[pyppeteer-debug] Navigating to {url}", file=sys.stderr)
-        try:
-            response = await page.goto("{url}", waitUntil="networkidle2", timeout=30000)
-            status = response.status if response else "None"
-            print(f"[pyppeteer-debug] Response status: {{status}}", file=sys.stderr)
-        except Exception as e:
-            print(f"[pyppeteer-debug] goto error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
-            raise
-        
-        print(f"[pyppeteer-debug] Waiting for content", file=sys.stderr)
-        await asyncio.sleep(2)
-        
-        print(f"[pyppeteer-debug] Extracting HTML", file=sys.stderr)
-        html = await page.evaluate("document.documentElement.outerHTML")
-        print(f"[pyppeteer-debug] HTML length: {{len(html)}}", file=sys.stderr)
-        
-        await browser.close()
-        print(f"[pyppeteer-debug] Browser closed", file=sys.stderr)
-        
-        print(html)
-        
-    except Exception as e:
-        print(f"[pyppeteer-debug] Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
-        import traceback
-        traceback.print_exc(file=sys.stderr)
-        raise
+            async def fetch():
+                executable = os.environ.get("PYPPETEER_EXECUTABLE_PATH")
 
-asyncio.run(main())
-'''
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-                f.write(script_content)
-                script_path = f.name
-
-            try:
-                env = os.environ.copy()
-                for key in [
-                    "http_proxy",
-                    "https_proxy",
-                    "HTTP_PROXY",
-                    "HTTPS_PROXY",
-                    "ftp_proxy",
-                    "FTP_PROXY",
-                    "no_proxy",
-                    "NO_PROXY",
-                ]:
-                    env.pop(key, None)
-
-                logger.debug(f"[pyppeteer] Running subprocess for {url}")
-                result = subprocess.run(
-                    [sys.executable, script_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                    env=env,
-                )
-
-                logger.debug(
-                    f"[pyppeteer] Subprocess stderr: {result.stderr[:500] if result.stderr else '(empty)'}"
-                )
-
-                if result.returncode == 0 and result.stdout:
-                    content = result.stdout.strip()[:500000]
-                    logger.info(
-                        f"[pyppeteer] Successfully fetched {url}, content length: {len(content)}"
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        executable_path=executable,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-gpu",
+                            "--disable-cache",
+                            "--disk-cache-size=0",
+                            "--disable-web-security",
+                            "--disable-features=IsolateOrigins,site-per-process",
+                            "--allow-running-insecure-content",
+                        ],
                     )
-                    return {"success": True, "content": content}
-                else:
-                    error_msg = (
-                        result.stderr[:500] if result.stderr else "Unknown error"
+                    page = await browser.new_page(
+                        viewport={"width": 1920, "height": 1080}
                     )
-                    logger.warning(f"[pyppeteer] Failed to fetch {url}: {error_msg}")
-                    return {
-                        "success": False,
-                        "error": f"Pyppeteer error: {error_msg}",
-                    }
-            finally:
-                os.unlink(script_path)
-        except subprocess.TimeoutExpired:
-            logger.error(f"[pyppeteer] Timeout after 60 seconds for {url}")
-            return {"success": False, "error": "Pyppeteer timeout"}
+                    await page.goto(url, wait_until="networkidle", timeout=30000)
+                    await asyncio.sleep(2)
+                    html = await page.content()
+                    await browser.close()
+                    return html
+
+            content = asyncio.run(fetch())
+            logger.info(
+                f"[playwright] Successfully fetched {url}, content length: {len(content)}"
+            )
+            return {"success": True, "content": content[:500000]}
+
         except Exception as e:
-            logger.error(f"[pyppeteer] Error fetching {url}: {type(e).__name__}: {e}")
-            logger.debug(f"[pyppeteer] Traceback: {traceback.format_exc()}")
+            logger.error(f"[playwright] Error fetching {url}: {type(e).__name__}: {e}")
+            logger.debug(f"[playwright] Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
     @staticmethod
