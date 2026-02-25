@@ -1,8 +1,9 @@
-.PHONY: help install start stop test lint typecheck clean celery
+.PHONY: help install start stop test lint typecheck clean celery init
 
 help:
 	@echo "Available commands:"
 	@echo "  make install    - Install dependencies"
+	@echo "make init        - Initialize database (create db directory)"
 	@echo "  make start      - Start the Flask application"
 	@echo "  make stop       - Stop the running Flask application"
 	@echo "  make test       - Run tests"
@@ -13,6 +14,11 @@ help:
 
 install:
 	uv sync
+
+init:
+	@echo "Initializing database..."
+	@mkdir -p db
+	@echo "Database initialized"
 
 start:
 	@echo "Starting Flask application..."

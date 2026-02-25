@@ -18,6 +18,7 @@ RUN apk add --no-cache \
     libgcc \
     chromium \
     chromium-chromedriver \
+    make \
     && rm -rf /var/cache/apk/*
 
 COPY pyproject.toml ./

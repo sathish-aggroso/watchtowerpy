@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, scoped_session, declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import StaticPool
 
-Base = declarative_base()
+from app.models import Base
 
 _engine = None
 _Session = None

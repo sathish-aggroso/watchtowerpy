@@ -22,7 +22,4 @@ checkdiff.db
 .git
 .gitignore
 README.md
-tests/
-test_*.py
-Makefile
 agents.md
