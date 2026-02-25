@@ -3,12 +3,8 @@ services:
     build: .
     ports:
       - "8000:5000"
-    volumes:
-      - ./checkdiff.db:/app/checkdiff.db
-      - ./static/screenshots:/app/static/screenshots
     environment:
       - FLASK_ENV=development
-      - DATABASE_PATH=/app/checkdiff.db
     env_file:
       - .env
     restart: unless-stopped

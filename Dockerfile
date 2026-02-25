@@ -6,6 +6,8 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
+RUN mkdir -p /app/db
+
 RUN apk add --no-cache \
     wget \
     gnupg \
@@ -26,7 +28,10 @@ COPY templates ./templates
 COPY static ./static
 COPY wsgi.py ./
 COPY .env.example ./
+COPY Makefile ./
+COPY start.sh ./
+RUN chmod +x start.sh
 
 EXPOSE 5000
 
-CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "wsgi:app"]
+CMD ["./start.sh"]
