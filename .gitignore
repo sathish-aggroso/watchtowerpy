@@ -1,0 +1,17 @@
+# Python-generated files
+.coverage
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.db
+# Virtual environments
+.venv
+
+# Environment variables
+.env
+*.local
+screenshots
+./static/screenshots/
